@@ -24,8 +24,8 @@ if not os.path.exists("train.parquet"):
     napi.download_dataset("v5.2/train.parquet", "train.parquet")
 
 current_round = napi.get_current_round()
-live_remote_path = f"v5.2/live_{current_round}.parquet"
-live_local_path = f"live_{current_round}.parquet"
+live_remote_path = "v5.2/live.parquet"
+live_local_path = "live.parquet"
 
 print(f"Pobieram dane live dla rundy {current_round}...")
 napi.download_dataset(live_remote_path, live_local_path)
