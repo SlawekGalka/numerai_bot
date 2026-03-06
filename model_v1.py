@@ -1,5 +1,6 @@
 import os
 import gc
+import time
 import numerapi
 import pyarrow.parquet as pq
 import pandas as pd
@@ -19,16 +20,35 @@ NOWY_MODEL_ID = "e171538a-7f83-47fe-bfb0-17eaab8076f7"
 napi = numerapi.NumerAPI(PUBLIC_ID, SECRET_KEY)
 
 # --- 2. POBIERANIE DANYCH ---
+import time
+
 if not os.path.exists("train.parquet"):
     print("Pobieram brakujące dane train...")
     napi.download_dataset("v5.2/train.parquet", "train.parquet")
 
+VERSION = "v5.2"
 current_round = napi.get_current_round()
-live_remote_path = f"v5.2/live_{current_round}.parquet"
-live_local_path = f"live_{current_round}.parquet"
+live_local_path = "live.parquet"
+live_remote_path = f"{VERSION}/live_{current_round}.parquet"
 
-print(f"Pobieram dane live dla rundy {current_round}...")
-napi.download_dataset(live_remote_path, live_local_path)
+max_attempts = 6
+wait_seconds = 300  # 5 minut
+
+for attempt in range(1, max_attempts + 1):
+    try:
+        print(f"[{attempt}/{max_attempts}] Próba pobrania {live_remote_path}...")
+        napi.download_dataset(live_remote_path, live_local_path)
+        print("✅ Live data pobrane pomyślnie.")
+        break
+    except Exception as e:
+        if attempt == max_attempts:
+            print(f"⚠️ Plik dla rundy {current_round} wciąż niedostępny. Przechodzę na fallback...")
+            fallback_path = f"{VERSION}/live_{current_round - 1}.parquet"
+            napi.download_dataset(fallback_path, live_local_path)
+            print(f"✅ Pobrano fallback (poprzednia runda): {fallback_path}")
+            break
+        print(f"Plik jeszcze niedostępny: {e}. Czekam {wait_seconds} sekund...")
+        time.sleep(wait_seconds)
 
 # --- 3. ODTWARZANIE STAREGO MODELU (20 000 WIERSZY) ---
 print("\nOdtwarzanie oryginalnego modelu (20 000 wierszy)...")
