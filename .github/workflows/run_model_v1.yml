@@ -2,8 +2,7 @@ name: Uruchom Model V1 (Numerai)
 
 on:
   schedule:
-    # Robot uruchomi się sam w każdą środę o 12:00 UTC (13:00 / 14:00 w Niemczech)
-    - cron: '0 12 * * 3'
+    - cron: '0 14 * * 3'
   workflow_dispatch: # Ten wpis pozwala Ci odpalić skrypt ręcznie na żądanie!
 
 jobs:
