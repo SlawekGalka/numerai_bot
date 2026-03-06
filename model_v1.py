@@ -24,10 +24,22 @@ if not os.path.exists("train.parquet"):
     napi.download_dataset("v5.2/train.parquet", "train.parquet")
 
 current_round = napi.get_current_round()
-live_remote_path = "v5.2/live.parquet"
+print(f"Sprawdzam dostępne pliki live dla rundy {current_round}...")
+
+# Zamiast zgadywać, pytamy API o pełną listę plików na serwerze
+available_files = napi.list_datasets()
+
+# Filtrujemy listę, szukając czegokolwiek, co jest plikiem live w wersji 5.2
+live_files = [f for f in available_files if f.startswith("v5.2/live") and f.endswith(".parquet")]
+
+if not live_files:
+    raise ValueError("Błąd: Serwer Numerai nie wystawił jeszcze pliku live dla tej rundy!")
+
+# Wybieramy pierwszy pasujący plik, niezależnie od tego, jak dokładnie go nazwali
+live_remote_path = live_files[0]
 live_local_path = "live.parquet"
 
-print(f"Pobieram dane live dla rundy {current_round}...")
+print(f"Znaleziono plik! Pobieram: {live_remote_path}...")
 napi.download_dataset(live_remote_path, live_local_path)
 
 # --- 3. ODTWARZANIE STAREGO MODELU (20 000 WIERSZY) ---
