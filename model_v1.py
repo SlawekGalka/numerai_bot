@@ -1,6 +1,7 @@
 import os
 import gc
 import time
+import sys
 import numerapi
 import pyarrow.parquet as pq
 import pandas as pd
@@ -19,36 +20,42 @@ NOWY_MODEL_ID = "e171538a-7f83-47fe-bfb0-17eaab8076f7"
 
 napi = numerapi.NumerAPI(PUBLIC_ID, SECRET_KEY)
 
-# --- 2. POBIERANIE DANYCH ---
-import time
 
+     # --- 2. POBIERANIE DANYCH (PANCERNY SYSTEM) ---
+print("\nSprawdzanie plików na dysku serwera...")
 if not os.path.exists("train.parquet"):
-    print("Pobieram brakujące dane train...")
+    print("Pobieram brakujące dane train (to potrwa chwilę)...")
     napi.download_dataset("v5.2/train.parquet", "train.parquet")
 
-VERSION = "v5.2"
 current_round = napi.get_current_round()
-live_local_path = "live.parquet"
-live_remote_path = f"{VERSION}/live_{current_round}.parquet"
+live_file_name = "live.parquet"
 
-max_attempts = 6
-wait_seconds = 300  # 5 minut
+# Lista 3 możliwych wariantów
+live_candidates = [
+    f"v5.2/live_{current_round}.parquet",
+    f"v5.2/live_{current_round - 1}.parquet",
+    "v5.2/live.parquet"
+]
 
-for attempt in range(1, max_attempts + 1):
-    try:
-        print(f"[{attempt}/{max_attempts}] Próba pobrania {live_remote_path}...")
-        napi.download_dataset(live_remote_path, live_local_path)
-        print("✅ Live data pobrane pomyślnie.")
+downloaded = False
+for path in live_candidates:
+    if downloaded:
         break
-    except Exception as e:
-        if attempt == max_attempts:
-            print(f"⚠️ Plik dla rundy {current_round} wciąż niedostępny. Przechodzę na fallback...")
-            fallback_path = f"{VERSION}/live_{current_round - 1}.parquet"
-            napi.download_dataset(fallback_path, live_local_path)
-            print(f"✅ Pobrano fallback (poprzednia runda): {fallback_path}")
+    print(f"\nSprawdzam ścieżkę: {path} ...")
+    for attempt in range(1, 3):
+        try:
+            napi.download_dataset(path, live_file_name)
+            print(f"✅ SUKCES! Plik {path} został pobrany.")
+            downloaded = True
             break
-        print(f"Plik jeszcze niedostępny: {e}. Czekam {wait_seconds} sekund...")
-        time.sleep(wait_seconds)
+        except Exception as e:
+            print(f"  -> Próba {attempt}/2 nieudana.")
+            if attempt < 2:
+                time.sleep(5)
+
+if not downloaded:
+    print("\n❌ KRYTYCZNY BŁĄD SYSTEMU: Numerai wciąż nie wystawiło ŻADNEGO pliku live.")
+    sys.exit(0) # Zatrzymuje bota z zielonym ptaszkiem, zamiast czerwonego błędu!
 
 # --- 3. ODTWARZANIE STAREGO MODELU (20 000 WIERSZY) ---
 print("\nOdtwarzanie oryginalnego modelu (20 000 wierszy)...")
