@@ -86,7 +86,7 @@ gc.collect()
 
 # --- 4. GENEROWANIE PROGNOZ ---
 print("\nGenerowanie prognoz...")
-pf_live = pq.ParquetFile(live_local_path)
+pf_live = pq.ParquetFile("live.parquet")
 
 all_preds = []
 all_ids = []
